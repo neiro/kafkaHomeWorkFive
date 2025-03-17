@@ -18,51 +18,55 @@ public class KafkaProducerApp {
         String truststoreLocation = System.getenv("TRUSTSTORE_LOCATION");
         String truststorePassword = System.getenv("TRUSTSTORE_PASSWORD");
 
-        // Получаем настройки продюсера через утилиту
+        // Получаем настройки Kafka-продюсера с учётом безопасности (SSL, аутентификация)
         Properties props = KafkaConfig.getProducerProperties(
                 bootstrapServers, truststoreLocation, truststorePassword, user, password);
         
+        // Создаём Kafka-продюсер с заданными параметрами
         KafkaProducer<String, String> producer = new KafkaProducer<>(props);
 
-        // Создаем экземпляр Faker для генерации фейковых данных
+        // Используем Faker для генерации случайных данных
         Faker faker = new Faker();
 
-        // Генерация сообщений в течение 10 минут (600 000 мс)
+        // Продюсер отправляет сообщения в течение 10 минут
         long durationMillis = TimeUnit.MINUTES.toMillis(10);
         long endTime = System.currentTimeMillis() + durationMillis;
-        long messageCount = 0;
+        long messageCount = 0; // Счётчик отправленных сообщений
 
         try {
             while (System.currentTimeMillis() < endTime) {
-                // Генерация полей согласно схеме
-                String article = faker.code().isbn13(); // пример случайного кода
-                String name = faker.commerce().productName();
-                int quantity = faker.number().numberBetween(1, 1000);
-                double price = faker.number().randomDouble(2, 10, 1000);
-                boolean inStock = faker.bool().bool();
-                // Выбираем валюту из заданного набора
+                // Генерация случайных данных, моделирующих товарные позиции
+                String article = faker.code().isbn13(); // Генерируем случайный артикул
+                String name = faker.commerce().productName(); // Название товара
+                int quantity = faker.number().numberBetween(1, 1000); // Количество единиц
+                double price = faker.number().randomDouble(2, 10, 1000); // Цена
+                boolean inStock = faker.bool().bool(); // В наличии или нет
+
+                // Выбор случайной валюты из доступного списка
                 String[] currencies = {"USD", "EUR", "RUB"};
                 String currency = currencies[faker.number().numberBetween(0, currencies.length)];
-                String description = faker.lorem().sentence();
+                
+                String description = faker.lorem().sentence(); // Описание товара
 
-                // Формирование JSON-сообщения в соответствии с Avro-схемой
+                // Формируем JSON-сообщение в соответствии с предполагаемой схемой
                 String jsonPayload = String.format(
                         "{\"article\":\"%s\",\"name\":\"%s\",\"quantity\":%d,\"price\":%.2f,\"inStock\":%b,\"currency\":\"%s\",\"description\":\"%s\"}",
                         article, name, quantity, price, inStock, currency, description);
 
-                // Формирование ProducerRecord (ключ можно формировать по-своему)
+                // Создаём Kafka-сообщение с ключом, привязанным к порядковому номеру
                 ProducerRecord<String, String> record = new ProducerRecord<>(topic, "key-" + messageCount, jsonPayload);
                 
-                // Отправляем сообщение асинхронно
+                // Асинхронно отправляем сообщение в Kafka
                 producer.send(record);
                 messageCount++;
 
-                // Задержка 10 мс перед отправкой следующего сообщения
+                // Короткая задержка в 10 мс перед отправкой следующего сообщения
                 Thread.sleep(10);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(); // Логируем возможные ошибки
         } finally {
+            // Завершаем работу продюсера корректно
             producer.flush();
             producer.close();
             System.out.println("Отправлено сообщений: " + messageCount);

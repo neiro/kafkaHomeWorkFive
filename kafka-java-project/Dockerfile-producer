@@ -3,11 +3,8 @@ FROM maven:3.9.9-eclipse-temurin-11 AS producer_builder
 
 WORKDIR /app
 COPY . .
-# Переходим в папку producer
-# WORKDIR /app/producer
-# RUN ls -l
 RUN mvn clean package -DskipTests
-# RUN ls -la target
+
 
 # Stage 2: Запуск приложения
 FROM openjdk:11-jre-slim
@@ -31,10 +28,4 @@ WORKDIR /app
 # Копируем скомпилированный jar-файл из build-стадии
 COPY --from=producer_builder /app/producer/target/kafka-java-project-1.0-SNAPSHOT-producer.jar /app/kafka-producer.jar
 
-# Копируем схему и скрипт регистрации схемы
-# COPY Product.avsc /app/Product.avsc
-# COPY entrypoint.sh /app/entrypoint.sh
-# RUN chmod +x /app/entrypoint.sh
-# При запуске сначала выполнится entrypoint.sh, который зарегистрирует схему, затем запустится приложение
-# ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["java", "-jar", "/app/kafka-producer.jar"]

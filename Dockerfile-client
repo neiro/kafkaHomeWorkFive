@@ -1,6 +1,7 @@
 # Stage 1: Подготовка truststore на базе Debian
 FROM debian:stable-slim as builder
 
+# Скачиваем CA-сертификат от Yandex и импортируем сертификаты непосредственно в новый truststore по нужному пути
 RUN apt-get update && \
     apt-get install -y wget ca-certificates curl jq default-jre-headless && \
     mkdir -p /usr/local/share/ca-certificates/Yandex && \

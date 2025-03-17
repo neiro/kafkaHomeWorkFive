@@ -8,11 +8,12 @@ services:
       dockerfile: Dockerfile-client
     image: kafka-client:latest
     command: >
+      # Описывает топик my_topic в Kafka
       kafka-topics --bootstrap-server rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091
       --command-config /client.properties
       --describe --topic my_topic
     volumes:
-      - ./client.properties:/client.properties:ro
+      - ./client.properties:/client.properties:ro  # Подключаем конфиг с параметрами клиента Kafka
 
   kafka-client-2:
     build: 
@@ -20,20 +21,21 @@ services:
       dockerfile: Dockerfile-client
     image: kafka-client:latest
     command: >
+      # Читает сообщения из Kafka-топика с самого начала
       /usr/bin/kafka-console-consumer --bootstrap-server rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091
       --topic my_topic
       --consumer.config /client.properties
       --from-beginning
     volumes:
-      - ./client.properties:/client.properties:ro      
+      - ./client.properties:/client.properties:ro  # Подключаем конфиг клиента
 
-      
   schema-initializer:
     build: 
       context: .
       dockerfile: Dockerfile
     container_name: schema-initializer
     environment:
+      # Настройки подключения к Schema Registry
       - SCHEMA_REGISTRY_URL=https://rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:443
       - SCHEMA_REGISTRY_USER=producer
       - SCHEMA_REGISTRY_PASSWORD=kafkaSuperPuper
@@ -45,8 +47,9 @@ services:
       context: ./kafka-java-project
       dockerfile: Dockerfile-producer
     environment:
-      - BOOTSTRAP_SERVERS=rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091,rc1a-qq7r38r0tqmpaahs.mdb.yandexcloud.net:9091,rc1a-tnshi2eesnkcd3n4.mdb.yandexcloud.net:9091,rc1b-0aq1e8kha3u596ap.mdb.yandexcloud.net:9091,rc1b-7g3u99o94d22v593.mdb.yandexcloud.net:9091,rc1b-jslae32n6e6i776b.mdb.yandexcloud.net:9091,rc1d-7p4hu8pagk56cnem.mdb.yandexcloud.net:9091,rc1d-ld7p359rj0qkdqc4.mdb.yandexcloud.net:9091,rc1d-n80sae76967totaj.mdb.yandexcloud.net:9091
-      - TOPIC=my_topic
+      # Список серверов Kafka-брокеров
+      - BOOTSTRAP_SERVERS=rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091,...
+      - TOPIC=my_topic  # Топик, в который отправляются сообщения
       - PRODUCER_USER=producer
       - PRODUCER_PASSWORD=kafkaSuperPuper
       - TRUSTSTORE_LOCATION=/etc/security/ssl
@@ -55,7 +58,7 @@ services:
       - SCHEMA_REGISTRY_USER=producer
       - SCHEMA_REGISTRY_PASSWORD=kafkaSuperPuper
     depends_on:
-      - schema-initializer
+      - schema-initializer  # Убеждаемся, что Schema Registry инициализирован перед запуском продюсера
     networks:
       - kafka-network
 
@@ -64,8 +67,9 @@ services:
       context: ./kafka-java-project
       dockerfile: Dockerfile-consumer
     environment:
-      - BOOTSTRAP_SERVERS=rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091,rc1a-qq7r38r0tqmpaahs.mdb.yandexcloud.net:9091,rc1a-tnshi2eesnkcd3n4.mdb.yandexcloud.net:9091,rc1b-0aq1e8kha3u596ap.mdb.yandexcloud.net:9091,rc1b-7g3u99o94d22v593.mdb.yandexcloud.net:9091,rc1b-jslae32n6e6i776b.mdb.yandexcloud.net:9091,rc1d-7p4hu8pagk56cnem.mdb.yandexcloud.net:9091,rc1d-ld7p359rj0qkdqc4.mdb.yandexcloud.net:9091,rc1d-n80sae76967totaj.mdb.yandexcloud.net:9091
-      - TOPIC=my_topic
+      # Подключение к Kafka для чтения сообщений
+      - BOOTSTRAP_SERVERS=rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091,...
+      - TOPIC=my_topic  # Читаемый топик
       - CONSUMER_USER=consumer
       - CONSUMER_PASSWORD=kafkaSuperPuper
       - TRUSTSTORE_LOCATION=/etc/security/ssl
@@ -74,7 +78,7 @@ services:
       - SCHEMA_REGISTRY_USER=consumer
       - SCHEMA_REGISTRY_PASSWORD=kafkaSuperPuper
     depends_on:
-      - schema-initializer
+      - schema-initializer  # Сначала должен быть инициализирован Schema Registry
     networks:
       - kafka-network
 
@@ -83,26 +87,20 @@ services:
       context: .
       dockerfile: Dockerfile-nifi
     container_name: nifi
-    # user: "root"
     ports:
-      - "8080:8080"
+      - "8080:8080"  # Порт доступа к NiFi UI
     networks:
       - kafka-network
     environment:
-      # Порт, на котором NiFi будет доступен
-      NIFI_WEB_HTTP_PORT: 8080
-      # Оптимизированные параметры JVM (устанавливаем начальный и максимальный размер кучи, здесь 4GB – можно скорректировать)
+      # Конфигурация NiFi
+      NIFI_WEB_HTTP_PORT: 8080  # Открытый HTTP-порт
       JAVA_TOOL_OPTIONS: "-Xms8g -Xmx8g -Djavax.net.ssl.trustStore=/opt/nifi/conf/truststore.jks -Djavax.net.ssl.trustStorePassword=kafkaSuperPuper"
-      # Дополнительные переменные для оптимизации работы NiFi
-      NIFI_CLUSTER_IS_NODE: "false"
-      # Если требуется задать параметры для чувствительных свойств
-      NIFI_SENSITIVE_PROPS_KEY: "yourSensitivePropsKey"
+      NIFI_CLUSTER_IS_NODE: "false"  # NiFi работает в режиме одиночного узла
+      NIFI_SENSITIVE_PROPS_KEY: "yourSensitivePropsKey"  # Ключ для шифрования чувствительных данных
     volumes:
-      # Монтирование директории для сохранения данных NiFi (flowfile, репозитории, кэш и т.д.)
-      - ./nifi_data:/opt/nifi/nifi-current/data
-    restart: unless-stopped
-   
+      - ./nifi_data:/opt/nifi/nifi-current/data  # Директория для хранения данных NiFi
+    restart: unless-stopped  # Перезапуск контейнера при сбое
 
 networks:
   kafka-network:
-    driver: bridge
+    driver: bridge  # Используется bridge-сеть для взаимодействия сервисов

@@ -24,5 +24,4 @@ RUN keytool -importcert -alias YandexCA \
             -storepass kafkaSuperPuper \
             -noprompt
 
-# Возвращаем пользователя обратно (обычно NiFi работает от пользователя nifi)
-# USER nifi
+

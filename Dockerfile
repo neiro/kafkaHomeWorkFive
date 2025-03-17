@@ -24,10 +24,6 @@ RUN keytool -importcert \
     -storepass changeit \
     -noprompt
 
-# Если у вас есть дополнительная цепочка сертификатов, убедитесь, что файл существует в контексте сборки.
-# Если файла нет, закомментируйте следующие строки.
-# COPY yandex_chain.crt /usr/local/share/ca-certificates/yandex_chain.crt
-# RUN update-ca-certificates
 
 # Создаем рабочую директорию
 WORKDIR /app
