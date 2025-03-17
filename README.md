@@ -115,8 +115,28 @@ terraform destroy
 ```
 ![Удаление кластера](scr/cluster-destroy.png)
 
-## 8. Итоги первого задания
+## 8. Итоги первого задания "Развёртывание и настройка Kafka-кластера в Yandex Cloud"
 
-Результаты работы с Schema Registery
+### Результаты работы с Schema Registery
 ![Скриншоты](scr/cluster-schema-registery.png)
 
+### Данные по топику - вывод команды kafka-topics.sh --describe
+![Скриншоты](scr/kafka-topics-describe.png)
+
+### Скриншоты, подтверждающие успешную передачу сообщений:
+![Скриншоты](scr/log-producer.png)
+![Скриншоты](scr/log-consumer.png)
+
+## 9. Итоги второго задания "Интеграция Kafka с внешними системами (Apache NiFi / Hadoop)"
+
+### Скриншот из консоли с запущенными сервисами
+![Скриншоты](scr/services.png)
+
+### Kafka-топик с поступающими данными (kafka-console-consumer.sh)
+![Скриншоты](scr/kafka-console-consumer.png)
+
+### Логи успешной работы NiFi или Hadoop (вывод в консоли)
+![Скриншоты](scr/nifi1.png)
+![Скриншоты](scr/nifi2.png)
+![Скриншоты](scr/nifi3.png)
+![Скриншоты](scr/nifi4.png)
