@@ -1,0 +1,22 @@
+# Stage 1: Подготовка truststore на базе Debian
+FROM debian:stable-slim as builder
+
+RUN apt-get update && \
+    apt-get install -y wget ca-certificates curl jq default-jre-headless && \
+    mkdir -p /usr/local/share/ca-certificates/Yandex && \
+    wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
+         --output-document /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt && \
+    chmod 0655 /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt && \
+    update-ca-certificates && \
+    keytool -importcert -alias YandexCA \
+            -file /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt \
+            -keystore /tmp/truststore.jks \
+            -storepass kafkaSuperPuper \
+            -noprompt
+
+# Stage 2: Конечный образ на базе confluentinc/cp-kafka
+FROM confluentinc/cp-kafka:latest
+
+# Копируем подготовленный truststore из предыдущего этапа
+COPY --from=builder /tmp/truststore.jks /etc/security/ssl/truststore.jks
+

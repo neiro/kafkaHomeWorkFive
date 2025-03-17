@@ -1,0 +1,28 @@
+FROM apache/nifi:1.21.0
+
+# Выполняем команды от имени root
+USER root
+
+# Обновляем пакеты и устанавливаем необходимые утилиты
+RUN apt-get update && \
+    apt-get install -y wget ca-certificates curl jq
+
+# Скачиваем CA-сертификат от Yandex
+RUN mkdir -p /usr/local/share/ca-certificates/Yandex && \
+    wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
+         --output-document /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt && \
+    chmod 0644 /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt && \
+    update-ca-certificates
+
+# Создаем директорию для truststore, если ее нет
+RUN mkdir -p /opt/nifi/conf
+
+# Импортируем сертификат непосредственно в новый truststore по нужному пути
+RUN keytool -importcert -alias YandexCA \
+            -file /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt \
+            -keystore /opt/nifi/conf/truststore.jks \
+            -storepass kafkaSuperPuper \
+            -noprompt
+
+# Возвращаем пользователя обратно (обычно NiFi работает от пользователя nifi)
+# USER nifi

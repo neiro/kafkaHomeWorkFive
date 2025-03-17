@@ -1,0 +1,48 @@
+{
+  "namespace": "com.example.avro",
+  "type": "record",
+  "name": "Product",
+  "doc": "Схема для передачи характеристик товара",
+  "fields": [
+    {
+      "name": "article",
+      "type": "string",
+      "doc": "Артикул товара"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "doc": "Наименование товара"
+    },
+    {
+      "name": "quantity",
+      "type": "int",
+      "doc": "Количество товара"
+    },
+    {
+      "name": "price",
+      "type": "double",
+      "doc": "Цена товара"
+    },
+    {
+      "name": "inStock",
+      "type": "boolean",
+      "doc": "Флаг: true - на складе, false - под заказ"
+    },
+    {
+      "name": "currency",
+      "type": {
+        "type": "enum",
+        "name": "Currency",
+        "symbols": ["USD", "EUR", "RUB"],
+        "doc": "Валюта цены товара"
+      },
+      "doc": "Валюта, в которой указана цена товара"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "doc": "Описание товара"
+    }
+  ]
+}

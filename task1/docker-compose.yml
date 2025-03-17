@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+
+  kafka-client:
+    build: 
+      context: .
+      dockerfile: Dockerfile-client
+    image: kafka-client:latest
+    command: >
+      kafka-topics --bootstrap-server rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091
+      --command-config /client.properties
+      --describe --topic my_topic
+    volumes:
+      - ./client.properties:/client.properties:ro
+
+  kafka-client-2:
+    build: 
+      context: .
+      dockerfile: Dockerfile-client
+    image: kafka-client:latest
+    command: >
+      /usr/bin/kafka-console-consumer --bootstrap-server rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091
+      --topic my_topic
+      --consumer.config /client.properties
+      --from-beginning
+    volumes:
+      - ./client.properties:/client.properties:ro      
+
+      
+  schema-initializer:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: schema-initializer
+    environment:
+      - SCHEMA_REGISTRY_URL=https://rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:443
+      - SCHEMA_REGISTRY_USER=producer
+      - SCHEMA_REGISTRY_PASSWORD=kafkaSuperPuper
+    networks:
+      - kafka-network
+
+  kafka-producer:
+    build:
+      context: ./kafka-java-project
+      dockerfile: Dockerfile-producer
+    environment:
+      - BOOTSTRAP_SERVERS=rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091,rc1a-qq7r38r0tqmpaahs.mdb.yandexcloud.net:9091,rc1a-tnshi2eesnkcd3n4.mdb.yandexcloud.net:9091,rc1b-0aq1e8kha3u596ap.mdb.yandexcloud.net:9091,rc1b-7g3u99o94d22v593.mdb.yandexcloud.net:9091,rc1b-jslae32n6e6i776b.mdb.yandexcloud.net:9091,rc1d-7p4hu8pagk56cnem.mdb.yandexcloud.net:9091,rc1d-ld7p359rj0qkdqc4.mdb.yandexcloud.net:9091,rc1d-n80sae76967totaj.mdb.yandexcloud.net:9091
+      - TOPIC=my_topic
+      - PRODUCER_USER=producer
+      - PRODUCER_PASSWORD=kafkaSuperPuper
+      - TRUSTSTORE_LOCATION=/etc/security/ssl
+      - TRUSTSTORE_PASSWORD=kafkaSuperPuper
+      - SCHEMA_REGISTRY_URL=https://rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:443
+      - SCHEMA_REGISTRY_USER=producer
+      - SCHEMA_REGISTRY_PASSWORD=kafkaSuperPuper
+    depends_on:
+      - schema-initializer
+    networks:
+      - kafka-network
+
+  kafka-consumer:
+    build:
+      context: ./kafka-java-project
+      dockerfile: Dockerfile-consumer
+    environment:
+      - BOOTSTRAP_SERVERS=rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:9091,rc1a-qq7r38r0tqmpaahs.mdb.yandexcloud.net:9091,rc1a-tnshi2eesnkcd3n4.mdb.yandexcloud.net:9091,rc1b-0aq1e8kha3u596ap.mdb.yandexcloud.net:9091,rc1b-7g3u99o94d22v593.mdb.yandexcloud.net:9091,rc1b-jslae32n6e6i776b.mdb.yandexcloud.net:9091,rc1d-7p4hu8pagk56cnem.mdb.yandexcloud.net:9091,rc1d-ld7p359rj0qkdqc4.mdb.yandexcloud.net:9091,rc1d-n80sae76967totaj.mdb.yandexcloud.net:9091
+      - TOPIC=my_topic
+      - CONSUMER_USER=consumer
+      - CONSUMER_PASSWORD=kafkaSuperPuper
+      - TRUSTSTORE_LOCATION=/etc/security/ssl
+      - TRUSTSTORE_PASSWORD=kafkaSuperPuper
+      - SCHEMA_REGISTRY_URL=https://rc1a-8e5f2ghbbopnsf26.mdb.yandexcloud.net:443
+      - SCHEMA_REGISTRY_USER=consumer
+      - SCHEMA_REGISTRY_PASSWORD=kafkaSuperPuper
+    depends_on:
+      - schema-initializer
+    networks:
+      - kafka-network
+
+  nifi:
+    build:
+      context: .
+      dockerfile: Dockerfile-nifi
+    container_name: nifi
+    # user: "root"
+    ports:
+      - "8080:8080"
+    networks:
+      - kafka-network
+    environment:
+      # Порт, на котором NiFi будет доступен
+      NIFI_WEB_HTTP_PORT: 8080
+      # Оптимизированные параметры JVM (устанавливаем начальный и максимальный размер кучи, здесь 4GB – можно скорректировать)
+      JAVA_TOOL_OPTIONS: "-Xms8g -Xmx8g -Djavax.net.ssl.trustStore=/opt/nifi/conf/truststore.jks -Djavax.net.ssl.trustStorePassword=kafkaSuperPuper"
+      # Дополнительные переменные для оптимизации работы NiFi
+      NIFI_CLUSTER_IS_NODE: "false"
+      # Если требуется задать параметры для чувствительных свойств
+      NIFI_SENSITIVE_PROPS_KEY: "yourSensitivePropsKey"
+    volumes:
+      # Монтирование директории для сохранения данных NiFi (flowfile, репозитории, кэш и т.д.)
+      - ./nifi_data:/opt/nifi/nifi-current/data
+    restart: unless-stopped
+   
+
+networks:
+  kafka-network:
+    driver: bridge

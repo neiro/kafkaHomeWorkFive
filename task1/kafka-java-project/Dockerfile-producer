@@ -1,0 +1,40 @@
+# Stage 1: Сборка Maven-проекта
+FROM maven:3.9.9-eclipse-temurin-11 AS producer_builder
+
+WORKDIR /app
+COPY . .
+# Переходим в папку producer
+# WORKDIR /app/producer
+# RUN ls -l
+RUN mvn clean package -DskipTests
+# RUN ls -la target
+
+# Stage 2: Запуск приложения
+FROM openjdk:11-jre-slim
+# Устанавливаем необходимые пакеты: wget, ca-certificates, curl, jq
+RUN apt-get update && \
+    apt-get install -y wget ca-certificates curl jq && \
+    mkdir -p /usr/local/share/ca-certificates/Yandex && \
+    wget "https://storage.yandexcloud.net/cloud-certs/CA.pem" \
+         --output-document /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt && \
+    chmod 0655 /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt && \
+    update-ca-certificates && \
+    # Импортируем сертификат в Java Key Store (truststore)
+    keytool -importcert -alias YandexCA \
+            -file /usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt \
+            -keystore /etc/security/ssl \
+            -storepass kafkaSuperPuper \
+            -noprompt
+WORKDIR /app
+
+
+# Копируем скомпилированный jar-файл из build-стадии
+COPY --from=producer_builder /app/producer/target/kafka-java-project-1.0-SNAPSHOT-producer.jar /app/kafka-producer.jar
+
+# Копируем схему и скрипт регистрации схемы
+# COPY Product.avsc /app/Product.avsc
+# COPY entrypoint.sh /app/entrypoint.sh
+# RUN chmod +x /app/entrypoint.sh
+# При запуске сначала выполнится entrypoint.sh, который зарегистрирует схему, затем запустится приложение
+# ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["java", "-jar", "/app/kafka-producer.jar"]
